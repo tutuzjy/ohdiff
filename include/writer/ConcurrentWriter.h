@@ -154,7 +154,15 @@ public:
         if (size > sector_size || data == nullptr || write_failed.load(std::memory_order_acquire)) {
             throw std::invalid_argument("Invalid concurrent pool write");
         }
-        const size_t offset = head.fetch_add(size, std::memory_order_relaxed);
+        constexpr size_t maxPoolSize = static_cast<size_t>(
+            std::min<uint64_t>(std::numeric_limits<size_t>::max(), (uint64_t{1} << CHUNK_OFFSET_BITS) - 1));
+        size_t offset = head.load(std::memory_order_relaxed);
+        do {
+            if (size > maxPoolSize - offset) {
+                write_failed.store(true, std::memory_order_release);
+                throw std::overflow_error("Backup data pool exceeds this build's size limit");
+            }
+        } while (!head.compare_exchange_weak(offset, offset + size, std::memory_order_relaxed));
         const size_t end = offset + size;
         size_t cursor = offset;
         if ((cursor >> sector_size_log2) != ((end - 1) >> sector_size_log2)) {

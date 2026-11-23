@@ -137,26 +137,26 @@ inline std::vector<fs::path> DirectoryEntries(const fs::path& path)
     return entries;
 }
 
-static size_t get_directory_size(const fs::path& dir_path)
+static std::uintmax_t get_directory_size(const fs::path& dir_path)
 {
-    auto size_func = [](const fs::path& path) {
+    auto size_func = [](const fs::path& path) -> std::uintmax_t {
         if (fs::is_regular_file(path)) {
             return fs::file_size(path);
         } else if (fs::is_directory(path)) {
             return get_directory_size(path);
         }
-        return static_cast<size_t>(0);
+        return 0;
     };
 
     const auto paths = DirectoryEntries(dir_path);
 
     return tbb::parallel_reduce(
-        tbb::blocked_range<std::vector<fs::path>::const_iterator>(paths.begin(), paths.end()), static_cast<size_t>(0),
-        [&](tbb::blocked_range<std::vector<fs::path>::const_iterator> r, size_t init) -> size_t {
+        tbb::blocked_range<std::vector<fs::path>::const_iterator>(paths.begin(), paths.end()), std::uintmax_t{0},
+        [&](tbb::blocked_range<std::vector<fs::path>::const_iterator> r, std::uintmax_t init) {
             for (auto it = r.begin(); it != r.end(); ++it) {
                 init += size_func(*it);
             }
             return init;
         },
-        std::plus<size_t>());
+        std::plus<>());
 }

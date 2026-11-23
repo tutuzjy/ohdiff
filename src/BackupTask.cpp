@@ -31,6 +31,16 @@
 #include <unordered_set>
 #include <utility>
 
+namespace {
+size_t CheckedFileSize(const struct stat& file_stat, const fs::path& path)
+{
+    if (!std::in_range<size_t>(file_stat.st_size)) {
+        throw std::overflow_error(fmt::format("Source file '{}' exceeds this build's size limit", path.string()));
+    }
+    return static_cast<size_t>(file_stat.st_size);
+}
+} // namespace
+
 BackupTask::BackupTask(std::shared_ptr<VirtualBackupLayer> base, fs::path src_dir, layer_id_t layer_id,
                        fs::path layer_file, int compressionLevel,
                        std::shared_ptr<ProgressHandlerInterface> progress_handler, fs::path log_file)
@@ -309,7 +319,7 @@ index_t BackupTask::onAddedFile(const index_t g_parent_index, const fs::path& pa
         throw std::runtime_error(
             fmt::format("{}: Failed to stat file '{}'. {}", __func__, path.string(), std::strerror(errno)));
     }
-    *file_it = FileMetadata{.size = static_cast<size_t>(file_stat.st_size),
+    *file_it = FileMetadata{.size = CheckedFileSize(file_stat, path),
                             .mtime = fs::last_write_time(path),
                             .name = path.filename(),
                             .parent = g_parent_index,
@@ -433,7 +443,7 @@ void BackupTask::onModifiedFileContent(const index_t index, const index_t parent
         throw std::runtime_error(
             fmt::format("{}: Failed to stat file '{}'. {}", __func__, path.string(), std::strerror(errno)));
     }
-    auto fm = FileMetadata{.size = static_cast<size_t>(file_stat.st_size),
+    auto fm = FileMetadata{.size = CheckedFileSize(file_stat, path),
                            .mtime = fs::last_write_time(path),
                            .name = path.filename(),
                            .parent = parent,

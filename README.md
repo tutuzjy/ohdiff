@@ -209,23 +209,27 @@ cmake --build build/linux --target ohdiff --parallel
 
 主程序位于 `build/linux/ohdiff`。要构建日志实验工具，配置时增加 `-DBUILD_LOG_TOOLS=ON` 并构建相应目标。
 
-### OpenHarmony arm64 交叉构建
+### OpenHarmony 交叉构建
 
-将 `OHOS_SDK` 设为包含 `native/` 的 Linux SDK 目录。下面使用 SDK 的工具链和动态 C++ 运行库。
+将 `OHOS_SDK` 设为包含 `native/` 的 OpenHarmony 7.0 Release Linux SDK 目录。按目标系统的用户态 ABI，将 `ohos_abi` 设为 `armeabi-v7a`、`arm64-v8a` 或 `x86_64`。下面使用 SDK 的工具链和动态 C++ 运行库。
 
 ```bash
-cmake -S . -B build/ohos-arm64 \
+ohos_abi=arm64-v8a
+ohos_build="build/ohos-$ohos_abi"
+cmake -S . -B "$ohos_build" \
     -DCMAKE_TOOLCHAIN_FILE="$OHOS_SDK/native/build/cmake/ohos.toolchain.cmake" \
-    -DOHOS_ARCH=arm64-v8a -DOHOS_STL=c++_shared \
+    -DOHOS_ARCH="$ohos_abi" -DOHOS_STL=c++_shared \
     -DCMAKE_BUILD_TYPE=Release -DSTATIC_BUILD=OFF \
-    -DCMAKE_INSTALL_PREFIX="$PWD/build/ohos-arm64/install"
-cmake --build build/ohos-arm64 --target ohdiff --parallel
-cmake --install build/ohos-arm64 --component ohdiff_runtime
+    -DCMAKE_INSTALL_PREFIX="$PWD/$ohos_build/install"
+cmake --build "$ohos_build" --target ohdiff --parallel
+cmake --install "$ohos_build" --component ohdiff_runtime
 ```
 
 部署 `install/bin` 和 `install/lib` 到目标设备，在运行时将 `install/lib` 加入 `LD_LIBRARY_PATH`。目标环境需提供与对应 SDK 匹配的 `libc++_shared.so`。运行真实日志演示前，按下文准备匹配的日志文件以及源目录、输出目录和属主恢复权限。
 
 ## 备份与恢复
+
+备份和恢复请使用相同 ABI 的构建。归档包含随 ABI 变化的原生类型。32 位构建的单个源文件和单层数据池各须小于 4 GiB。
 
 下面以 Linux 构建产物为例，在主程序所在目录执行命令：
 
@@ -315,7 +319,7 @@ cmake -S . -B build/linux \
 cmake --build build/linux --target log_generator updater
 ```
 
-交叉构建时，在 OpenHarmony arm64 配置命令中同样加入 `-DBUILD_LOG_TOOLS=ON`。工具输出位于对应构建目录的 `tools/` 子目录。
+交叉构建时，在 OpenHarmony 配置命令中同样加入 `-DBUILD_LOG_TOOLS=ON`。工具输出位于对应构建目录的 `tools/` 子目录。
 
 ### 日志生成器
 

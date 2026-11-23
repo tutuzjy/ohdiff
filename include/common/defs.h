@@ -28,6 +28,7 @@ using layer_id_t = uint16_t;
 const chunk_size_t CHUNK_MIN_SIZE = 4 << 10;
 const chunk_size_t CHUNK_AVG_SIZE = 16 << 10;
 const chunk_size_t CHUNK_MAX_SIZE = 64 << 10;
+inline constexpr unsigned CHUNK_OFFSET_BITS = 48;
 
 const char* const TEMP_FILE_SUFFIX = ".ohdiff_tmp";
 

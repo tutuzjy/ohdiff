@@ -98,14 +98,22 @@ struct DirectoryMetadata {
 
 struct chunk_offset_t {
     static_assert(sizeof(layer_id_t) == 2);
-    layer_id_t layer_id : 16; // [Serialized] Chunk's layer ID.
-    size_t loffset : 48;      // [Serialized] Chunk local offset in backup.
+    static constexpr unsigned LAYER_ID_BITS = 16;
+    layer_id_t layer_id : LAYER_ID_BITS;
+    uint64_t loffset : CHUNK_OFFSET_BITS;
 
-    // for serialization
     template <class Archive> void serialize(Archive& ar, const unsigned int version)
     {
-        uint64_t* ptr = reinterpret_cast<uint64_t*>(this);
-        ar&* ptr;
+        // Keep the existing archive layout with the layer ID in the low 16 bits.
+        uint64_t packed = 0;
+        if constexpr (Archive::is_saving::value) {
+            packed = (loffset << LAYER_ID_BITS) | layer_id;
+        }
+        ar & packed;
+        if constexpr (Archive::is_loading::value) {
+            layer_id = static_cast<layer_id_t>(packed);
+            loffset = packed >> LAYER_ID_BITS;
+        }
     }
 };
 
